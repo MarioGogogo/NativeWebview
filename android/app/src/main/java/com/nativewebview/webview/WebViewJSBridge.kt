@@ -11,10 +11,18 @@ import org.json.JSONObject
  *
  * H5 调用: window.NativeBridge.postMessage(JSON.stringify({type: 'xxx', data: {...}}))
  * RN 调用: webView.evaluateJavascript("window.onNativeMessage(...)")
+ *
+ * H5 可调用的方法:
+ * - openCamera() 打开相机拍照
+ * - openGallerySingle() 打开相册单选
+ * - openGalleryMulti() 打开相册多选
  */
 class WebViewJSBridge(
     private val webView: WebView,
-    private val onMessage: (String) -> Unit
+    private val onMessage: (String) -> Unit,
+    private val onOpenCamera: (() -> Unit)? = null,
+    private val onOpenGallerySingle: (() -> Unit)? = null,
+    private val onOpenGalleryMulti: (() -> Unit)? = null
 ) {
     companion object {
         const val BRIDGE_NAME = "NativeBridge"
@@ -24,14 +32,41 @@ class WebViewJSBridge(
 
     /**
      * H5 → Native: 接收来自 WebView 的消息
-     *
-     * 在 H5 中调用: window.NativeBridge.postMessage(jsonString)
      */
     @JavascriptInterface
     fun postMessage(message: String) {
-        // JavascriptInterface 在 WebView 线程执行，需切换到主线程
         mainHandler.post {
             onMessage(message)
+        }
+    }
+
+    /**
+     * H5 → Native: 打开相机拍照
+     */
+    @JavascriptInterface
+    fun openCamera() {
+        mainHandler.post {
+            onOpenCamera?.invoke()
+        }
+    }
+
+    /**
+     * H5 → Native: 打开相册单选
+     */
+    @JavascriptInterface
+    fun openGallerySingle() {
+        mainHandler.post {
+            onOpenGallerySingle?.invoke()
+        }
+    }
+
+    /**
+     * H5 → Native: 打开相册多选
+     */
+    @JavascriptInterface
+    fun openGalleryMulti() {
+        mainHandler.post {
+            onOpenGalleryMulti?.invoke()
         }
     }
 
@@ -58,10 +93,10 @@ class WebViewJSBridge(
 
     /**
      * Native → H5: 发送消息到 WebView
-     *
-     * 调用 H5 的 window.onNativeMessage(data) 方法
      */
     fun sendToWebView(message: String) {
+        android.util.Log.d("WebViewJSBridge", "sendToWebView: $message")
+        
         val escapedMessage = message
             .replace("\\", "\\\\")
             .replace("\"", "\\\"")
@@ -70,6 +105,7 @@ class WebViewJSBridge(
 
         val script = """
             (function() {
+                console.log('[NativeBridge] Received:', "$escapedMessage");
                 if (typeof window.onNativeMessage === 'function') {
                     window.onNativeMessage("$escapedMessage");
                 } else {
@@ -84,7 +120,7 @@ class WebViewJSBridge(
     }
 
     /**
-     * Native → H5: 执行任意 JS 并获取结果
+     * Native → H5: 执行任意 JS
      */
     fun evaluateJS(script: String, callback: ((String?) -> Unit)? = null) {
         mainHandler.post {

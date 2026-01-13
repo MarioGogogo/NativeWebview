@@ -19,4 +19,9 @@ class MainActivity : ReactActivity() {
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+
+  override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+    android.util.Log.d("MainActivity", "onActivityResult: requestCode=$requestCode, resultCode=$resultCode")
+    super.onActivityResult(requestCode, resultCode, data)
+  }
 }

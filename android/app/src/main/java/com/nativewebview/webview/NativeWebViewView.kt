@@ -1,7 +1,9 @@
 package com.nativewebview.webview
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ContentValues
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
@@ -14,8 +16,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
+import com.facebook.react.bridge.ActivityEventListener
+import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.ReactContext
 import java.io.File
 import java.text.SimpleDateFormat
@@ -28,7 +30,12 @@ import java.util.Locale
  * 使用 ViewGroup 作为容器，内部包含 WebView
  * 支持相机拍照、相册选择（单选/多选）
  */
-class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
+class NativeWebViewView(private val reactContext: ReactContext) : ViewGroup(reactContext) {
+
+    companion object {
+        private const val REQUEST_CODE_FILE_CHOOSER = 1001
+        private const val REQUEST_CODE_CAMERA = 1002
+    }
 
     // 实际使用的 WebView
     private var webView: WebView? = null
@@ -47,11 +54,6 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
     // 文件选择器回调
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
 
-    // 文件选择器 launchers
-    private var gallerySingleLauncher: ActivityResultLauncher<String>? = null
-    private var galleryMultiLauncher: ActivityResultLauncher<Array<String>>? = null
-    private var cameraLauncher: ActivityResultLauncher<Uri>? = null
-
     // 临时相机拍照 URI
     private var cameraPhotoUri: Uri? = null
 
@@ -62,14 +64,29 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
     private var allowFileAccess = true
     private var injectedJavaScript: String? = null
 
+    // Activity 结果监听器
+    private val activityEventListener: ActivityEventListener = object : BaseActivityEventListener() {
+        override fun onActivityResult(activity: Activity?, requestCode: Int, resultCode: Int, data: Intent?) {
+            android.util.Log.d("NativeWebView", "activityEventListener: onActivityResult - requestCode=$requestCode, resultCode=$resultCode")
+            when (requestCode) {
+                REQUEST_CODE_FILE_CHOOSER -> {
+                    handleFileChooserResult(resultCode, data)
+                }
+                REQUEST_CODE_CAMERA -> {
+                    handleCameraResult(resultCode)
+                }
+            }
+        }
+    }
+
     init {
+        reactContext.addActivityEventListener(activityEventListener)
         createWebView()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun createWebView() {
         webView = WebView(context).apply {
-            // 基础设置
             settings.apply {
                 javaScriptEnabled = this@NativeWebViewView.javaScriptEnabled
                 domStorageEnabled = this@NativeWebViewView.domStorageEnabled
@@ -82,7 +99,9 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
                 // 性能优化
                 builtInZoomControls = false
                 displayZoomControls = false
+                @Suppress("DEPRECATION")
                 savePassword = false
+                @Suppress("DEPRECATION")
                 saveFormData = false
 
                 // 安全设置
@@ -98,19 +117,12 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
                 setLayerType(ViewGroup.LAYER_TYPE_HARDWARE, null)
             }
 
-            // 设置 WebViewClient
             webViewClient = createWebViewClient()
-
-            // 设置 WebChromeClient
             webChromeClient = createWebChromeClient()
-
-            // 初始化文件选择器
-            initFileChoosers()
 
             // 初始化 JSBridge
             initJSBridge(this)
 
-            // 添加到容器
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
             this@NativeWebViewView.addView(this)
         }
@@ -174,57 +186,146 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
                 filePathCallback: ValueCallback<Array<Uri>>?,
                 fileChooserParams: FileChooserParams?
             ): Boolean {
+                // 取消之前的回调
+                fileChooserCallback?.onReceiveValue(null)
                 fileChooserCallback = filePathCallback
-                val acceptTypes = fileChooserParams?.acceptTypes ?: arrayOf("image/*")
-                galleryMultiLauncher?.launch(acceptTypes)
+
+                val acceptTypes = fileChooserParams?.acceptTypes?.joinToString(",") ?: "*/*"
+                openFileChooser(acceptTypes)
                 return true
             }
         }
     }
 
-    @SuppressLint("ObsoleteSdkInt")
-    private fun initFileChoosers() {
-        val activity = (context as? ReactContext)?.currentActivity ?: return
+    /**
+     * 打开文件选择器
+     */
+    private fun openFileChooser(acceptTypes: String) {
+        val activity = reactContext.currentActivity ?: return
+        
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = if (acceptTypes.isNotEmpty() && acceptTypes != "*/*") {
+                acceptTypes.split(",").firstOrNull()?.trim() ?: "*/*"
+            } else {
+                "*/*"
+            }
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+        }
+        
+        val chooserIntent = Intent.createChooser(intent, "选择文件")
+        reactContext.startActivityForResult(chooserIntent, REQUEST_CODE_FILE_CHOOSER, null)
+    }
 
-        // 单选图片/视频 (Gallery)
-        gallerySingleLauncher = activity.registerForActivityResult(
-            ActivityResultContracts.GetContent()
-        ) { uri: Uri? ->
-            uri?.let { sendFileToH5(it) }
+    /**
+     * 处理文件选择器结果
+     */
+    private fun handleFileChooserResult(resultCode: Int, data: Intent?) {
+        android.util.Log.d("NativeWebView", "handleFileChooserResult: resultCode=$resultCode, data=$data")
+        if (resultCode != Activity.RESULT_OK || data == null) {
+            android.util.Log.d("NativeWebView", "File chooser cancelled or no data")
+            fileChooserCallback?.onReceiveValue(null)
+            fileChooserCallback = null
+            return
         }
 
-        // 多选图片/视频 (Gallery)
-        galleryMultiLauncher = activity.registerForActivityResult(
-            ActivityResultContracts.OpenMultipleDocuments()
-        ) { uris: List<Uri> ->
-            if (uris.isNotEmpty()) {
-                // 发送第一个文件到 H5（主文件）
+        val uris = mutableListOf<Uri>()
+        
+        // 处理多选 (ClipData)
+        data.clipData?.let { clipData ->
+            android.util.Log.d("NativeWebView", "Processing ClipData: count=${clipData.itemCount}")
+            for (i in 0 until clipData.itemCount) {
+                clipData.getItemAt(i).uri?.let { uris.add(it) }
+            }
+        }
+        
+        // 处理单选 (data.data)
+        if (uris.isEmpty()) {
+            data.data?.let { 
+                android.util.Log.d("NativeWebView", "Processing single data Uri: $it")
+                uris.add(it) 
+            }
+        }
+
+        android.util.Log.d("NativeWebView", "Total Uris found: ${uris.size}")
+
+        if (uris.isNotEmpty()) {
+            // 发送到 H5
+            if (uris.size == 1) {
                 sendFileToH5(uris[0])
-                // 发送所有文件列表
+            } else {
                 sendFilesToH5(uris)
             }
-            fileChooserCallback?.onReceiveValue(uris.toTypedArray())
-            fileChooserCallback = null
         }
 
-        // 相机拍照
-        cameraLauncher = activity.registerForActivityResult(
-            ActivityResultContracts.TakePicture()
-        ) { success: Boolean ->
-            if (success) {
-                cameraPhotoUri?.let { uri ->
-                    sendFileToH5(uri)
-                }
+        // WebView 文件输入框回调
+        fileChooserCallback?.onReceiveValue(uris.toTypedArray())
+        fileChooserCallback = null
+    }
+
+    /**
+     * 打开相机拍照
+     */
+    fun openCamera() {
+        val activity = reactContext.currentActivity ?: return
+        
+        cameraPhotoUri = createCameraUri()
+        if (cameraPhotoUri == null || cameraPhotoUri == Uri.EMPTY) return
+        
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            putExtra(MediaStore.EXTRA_OUTPUT, cameraPhotoUri)
+        }
+        
+        reactContext.startActivityForResult(intent, REQUEST_CODE_CAMERA, null)
+    }
+
+    /**
+     * 处理相机拍照结果
+     */
+    private fun handleCameraResult(resultCode: Int) {
+        if (resultCode == Activity.RESULT_OK) {
+            cameraPhotoUri?.let { uri ->
+                sendFileToH5(uri)
             }
         }
+        cameraPhotoUri = null
+    }
+
+    /**
+     * 打开相册单选
+     */
+    fun openGallerySingle() {
+        val activity = reactContext.currentActivity ?: return
+
+        fileChooserCallback = null
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        reactContext.startActivityForResult(intent, REQUEST_CODE_FILE_CHOOSER, null)
+    }
+
+    /**
+     * 打开相册多选
+     */
+    fun openGalleryMulti() {
+        openFileChooser("image/*,video/*")
+    }
+
+    /**
+     * 打开相册选择图片或视频
+     */
+    fun openMediaPicker() {
+        openFileChooser("image/*,video/*")
     }
 
     /**
      * 发送单个文件到 H5
      */
     private fun sendFileToH5(uri: Uri) {
+        android.util.Log.d("NativeWebView", "sendFileToH5: uri=$uri")
         val fileInfo = getFileInfo(uri)
-        postMessageToWebView("{\"type\":\"file_selected\",\"data\":${fileInfo}}")
+        android.util.Log.d("NativeWebView", "sendFileToH5: fileInfo=$fileInfo")
+        val message = "{\"type\":\"file_selected\",\"data\":${fileInfo}}"
+        android.util.Log.d("NativeWebView", "sendFileToH5: message=$message")
+        postMessageToWebView(message)
     }
 
     /**
@@ -239,7 +340,6 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
      * 获取文件信息
      */
     private fun getFileInfo(uri: Uri): String {
-        val context = context ?: return "{}"
         val contentResolver = context.contentResolver
 
         var name = "未知文件"
@@ -288,8 +388,7 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
     /**
      * 创建相机拍照 URI
      */
-    private fun createCameraUri(): Uri {
-        val context = context ?: return Uri.EMPTY
+    private fun createCameraUri(): Uri? {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val fileName = "IMG_${timeStamp}.jpg"
 
@@ -300,9 +399,10 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
                 put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
                 put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/NativeWebView")
             }
-            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues) ?: Uri.EMPTY
+            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
         } else {
             // Android 9 使用文件
+            @Suppress("DEPRECATION")
             val storageDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "NativeWebView")
             if (!storageDir.exists()) {
                 storageDir.mkdirs()
@@ -343,41 +443,14 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
         webView?.goForward()
     }
 
+    fun stopLoading() {
+        webView?.stopLoading()
+    }
+
     fun evaluateJavaScript(script: String, callback: ((String?) -> Unit)? = null) {
         webView?.evaluateJavascript(script) { result ->
             callback?.invoke(result)
         }
-    }
-
-    // ============ 相机/相册 API (供 JSBridge 调用) ============
-
-    /**
-     * 打开相机拍照
-     */
-    fun openCamera() {
-        cameraPhotoUri = createCameraUri()
-        cameraLauncher?.launch(cameraPhotoUri)
-    }
-
-    /**
-     * 打开相册单选
-     */
-    fun openGallerySingle() {
-        gallerySingleLauncher?.launch("image/*")
-    }
-
-    /**
-     * 打开相册多选
-     */
-    fun openGalleryMulti() {
-        galleryMultiLauncher?.launch(arrayOf("image/*", "video/*"))
-    }
-
-    /**
-     * 打开相册选择图片或视频
-     */
-    fun openMediaPicker() {
-        galleryMultiLauncher?.launch(arrayOf("image/*", "video/*"))
     }
 
     // ============ 事件回调设置 ============
@@ -410,9 +483,21 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
 
     @SuppressLint("JavascriptInterface")
     private fun initJSBridge(webView: WebView) {
-        jsBridge = WebViewJSBridge(webView) { message ->
-            onMessage?.invoke(message)
-        }
+        jsBridge = WebViewJSBridge(
+            webView = webView,
+            onMessage = { message ->
+                onMessage?.invoke(message)
+            },
+            onOpenCamera = {
+                openCamera()
+            },
+            onOpenGallerySingle = {
+                openGallerySingle()
+            },
+            onOpenGalleryMulti = {
+                openGalleryMulti()
+            }
+        )
         webView.addJavascriptInterface(jsBridge!!, WebViewJSBridge.BRIDGE_NAME)
     }
 
@@ -459,6 +544,7 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
     }
 
     fun destroy() {
+        reactContext.removeActivityEventListener(activityEventListener)
         webView?.apply {
             stopLoading()
             clearHistory()
@@ -471,6 +557,6 @@ class NativeWebViewView(context: ReactContext) : ViewGroup(context) {
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        clearCache()
+        // 不要在这里清理缓存，避免不必要的开销
     }
 }

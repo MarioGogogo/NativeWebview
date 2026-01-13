@@ -21,6 +21,7 @@
         }
         h1 { color: #333; font-size: 22px; margin-bottom: 16px; text-align: center; }
         h2 { color: #666; font-size: 16px; margin-bottom: 12px; }
+        h3 { color: #555; font-size: 14px; margin: 12px 0 8px; }
         .btn {
             display: block;
             width: 100%;
@@ -39,11 +40,12 @@
         .btn-warning { background: #f59e0b; color: white; }
         .btn-file { background: #8b5cf6; color: white; }
         .btn-camera { background: #ec4899; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
         .log-area {
             background: #1e1e1e;
             border-radius: 10px;
             padding: 16px;
-            height: 200px;
+            height: 150px;
             overflow-y: auto;
             font-family: 'Monaco', 'Consolas', monospace;
             font-size: 12px;
@@ -55,6 +57,63 @@
         .log-item.info { color: #fbbf24; }
         .device-info { background: #f3f4f6; padding: 12px; border-radius: 8px; font-size: 13px; color: #666; }
         .device-info div { margin: 4px 0; }
+
+        /* 媒体预览区域 */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .media-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f3f4f6;
+        }
+        .media-item img, .media-item video {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+        }
+        .media-item .remove-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 24px;
+            height: 24px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .media-item .video-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+        }
+        .media-info {
+            font-size: 11px;
+            color: #666;
+            padding: 4px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .empty-tip {
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -64,30 +123,41 @@
     </div>
 
     <div class="card">
+        <h2>📷 相机与相册</h2>
+        <button class="btn btn-camera" onclick="NativeBridge.openCamera()">📸 拍照</button>
+        <button class="btn btn-file" onclick="NativeBridge.openGallerySingle()">🖼️ 相册单选</button>
+        <button class="btn btn-success" onclick="NativeBridge.openGalleryMulti()">📁 相册多选</button>
+    </div>
+
+    <div class="card">
         <h2>📤 发送消息到 RN</h2>
         <button class="btn btn-primary" onclick="sendSimpleMessage()">发送简单消息</button>
-        <button class="btn btn-success" onclick="sendJsonMessage()">发送 JSON 数据</button>
         <button class="btn btn-warning" onclick="sendActionMessage()">发送 Action 请求</button>
     </div>
 
     <div class="card">
-        <h2>📷 原生能力测试</h2>
-        <button class="btn btn-file" onclick="document.getElementById('fileInput').click()">🖼️ 打开相册</button>
-        <button class="btn btn-camera" onclick="document.getElementById('cameraInput').click()">📸 打开相机</button>
-        <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
-        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" onchange="handleFileSelect(event)">
-        <p style="font-size: 12px; color: #999; margin-top: 8px;" id="fileInfo"></p>
+        <h2>🎬 已选择的媒体</h2>
+        <div id="mediaContainer">
+            <div class="empty-tip">暂无选择的媒体</div>
+        </div>
+        <div id="mediaInfo" style="font-size: 12px; color: #666; margin-top: 8px;"></div>
     </div>
 
     <div class="card">
         <h2>📋 通信日志</h2>
         <div class="log-area" id="logArea"></div>
         <button class="btn btn-primary" onclick="clearLogs()" style="margin-top: 12px;">清空日志</button>
+        <button class="btn btn-danger" onclick="clearMedia()" style="margin-top: 8px;">清除媒体</button>
     </div>
 
     <script>
         const logArea = document.getElementById('logArea');
         const deviceInfoEl = document.getElementById('deviceInfo');
+        const mediaContainer = document.getElementById('mediaContainer');
+        const mediaInfoEl = document.getElementById('mediaInfo');
+
+        // 已选择的媒体文件
+        let selectedMedia = [];
 
         // 日志函数
         function log(message, type = 'info') {
@@ -117,6 +187,9 @@
                         <div><strong>时间戳:</strong> ${timestamp}</div>
                     `;
                     log('✅ JSBridge 已连接', 'info');
+                    log('✅ 可调用 NativeBridge.openCamera()', 'info');
+                    log('✅ 可调用 NativeBridge.openGallerySingle()', 'info');
+                    log('✅ 可调用 NativeBridge.openGalleryMulti()', 'info');
                 } catch (e) {
                     deviceInfoEl.textContent = '获取设备信息失败: ' + e.message;
                     log('❌ JSBridge 连接失败', 'info');
@@ -142,17 +215,6 @@
             sendToRN('Hello from WebView!');
         }
 
-        function sendJsonMessage() {
-            sendToRN({
-                type: 'user_action',
-                payload: {
-                    action: 'click',
-                    element: 'button',
-                    timestamp: Date.now()
-                }
-            });
-        }
-
         function sendActionMessage() {
             sendToRN({
                 type: 'request',
@@ -161,41 +223,12 @@
             });
         }
 
-        // 处理文件选择
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const fileInfo = {
-                    name: file.name,
-                    size: file.size,
-                    type: file.type,
-                    lastModified: new Date(file.lastModified).toLocaleString()
-                };
-                document.getElementById('fileInfo').textContent =
-                    `✅ 已选择: ${file.name} (${formatFileSize(file.size)})`;
-                log(`📷 选择文件: ${file.name}`, 'info');
-                // 发送文件信息到 RN
-                sendToRN({
-                    type: 'file_selected',
-                    data: fileInfo
-                });
-            }
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-        }
-
         // 接收来自 RN 的消息 (方式1: 函数回调)
         window.onNativeMessage = function(data) {
             log(`📥 收到: ${data}`, 'received');
             try {
                 const parsed = JSON.parse(data);
-                if (parsed.type === 'response') {
-                    log(`📦 响应数据: ${JSON.stringify(parsed.data)}`, 'received');
-                }
+                handleNativeMessage(parsed);
             } catch (e) {
                 // 非 JSON 格式，忽略
             }
@@ -205,6 +238,117 @@
         window.addEventListener('nativeMessage', function(event) {
             log(`📥 事件收到: ${event.detail}`, 'received');
         });
+
+        // 处理来自 Native 的消息
+        function handleNativeMessage(data) {
+            if (data.type === 'file_selected') {
+                // 单个文件选择
+                addMediaItem(data.data);
+                log(`📷 选择文件: ${data.data.name}`, 'info');
+            } else if (data.type === 'files_selected') {
+                // 多个文件选择
+                data.data.forEach(item => {
+                    addMediaItem(item);
+                });
+                log(`📷 选择 ${data.data.length} 个文件`, 'info');
+            } else if (data.type === 'response') {
+                log(`📦 响应数据: ${JSON.stringify(data.data)}`, 'received');
+            }
+        }
+
+        // 添加媒体项目到预览
+        function addMediaItem(fileData) {
+            const isVideo = fileData.type.startsWith('video/');
+            const mediaId = 'media_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+            const mediaItem = {
+                id: mediaId,
+                uri: fileData.uri,
+                name: fileData.name,
+                type: fileData.type,
+                size: fileData.size
+            };
+            selectedMedia.push(mediaItem);
+
+            const div = document.createElement('div');
+            div.className = 'media-item';
+            div.id = 'item_' + mediaId;
+            div.dataset.uri = fileData.uri;
+
+            if (isVideo) {
+                div.innerHTML = `
+                    <video src="${fileData.uri}" playsinline muted></video>
+                    <div class="video-icon">▶️</div>
+                    <button class="remove-btn" onclick="removeMedia('${mediaId}')">×</button>
+                    <div class="media-info">${fileData.name}</div>
+                `;
+            } else {
+                div.innerHTML = `
+                    <img src="${fileData.uri}" alt="${fileData.name}" loading="lazy">
+                    <button class="remove-btn" onclick="removeMedia('${mediaId}')">×</button>
+                    <div class="media-info">${fileData.name}</div>
+                `;
+            }
+
+            // 清空提示
+            const emptyTip = mediaContainer.querySelector('.empty-tip');
+            if (emptyTip) emptyTip.remove();
+
+            // 添加到容器
+            let grid = mediaContainer.querySelector('.media-grid');
+            if (!grid) {
+                grid = document.createElement('div');
+                grid.className = 'media-grid';
+                mediaContainer.appendChild(grid);
+            }
+            grid.appendChild(div);
+
+            // 更新媒体信息
+            updateMediaInfo();
+        }
+
+        // 移除媒体
+        function removeMedia(mediaId) {
+            const item = document.getElementById('item_' + mediaId);
+            if (item) {
+                item.remove();
+                selectedMedia = selectedMedia.filter(m => m.id !== mediaId);
+
+                // 如果没有媒体了，显示提示
+                if (selectedMedia.length === 0) {
+                    mediaContainer.innerHTML = '<div class="empty-tip">暂无选择的媒体</div>';
+                }
+                updateMediaInfo();
+            }
+        }
+
+        // 清除所有媒体
+        function clearMedia() {
+            selectedMedia = [];
+            mediaContainer.innerHTML = '<div class="empty-tip">暂无选择的媒体</div>';
+            mediaInfoEl.textContent = '';
+            log('🗑️ 已清除所有媒体', 'info');
+        }
+
+        // 更新媒体信息
+        function updateMediaInfo() {
+            if (selectedMedia.length > 0) {
+                const totalSize = selectedMedia.reduce((sum, m) => sum + (m.size || 0), 0);
+                const imageCount = selectedMedia.filter(m => m.type.startsWith('image/')).length;
+                const videoCount = selectedMedia.filter(m => m.type.startsWith('video/')).length;
+                mediaInfoEl.textContent = `共 ${selectedMedia.length} 个文件 (图片: ${imageCount}, 视频: ${videoCount}) - ${formatFileSize(totalSize)}`;
+            } else {
+                mediaInfoEl.textContent = '';
+            }
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (!bytes) return '0 B';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', initDeviceInfo);
