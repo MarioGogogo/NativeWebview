@@ -1,118 +1,47 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
+ * NativeWebview App
+ * 自研原生 WebView 示例项目
  */
+import React, { useState } from 'react';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { WebViewScreen } from './src/screens/WebViewScreen';
+import { CacheSettingsScreen } from './src/screens/CacheSettingsScreen';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+type Screen = 'home' | 'webview' | 'cacheSettings';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+export default function App(): React.JSX.Element {
+  const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+  const [currentUrl, setCurrentUrl] = useState<string | null>(null);
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  // 打开 WebView 页面
+  const handleOpenWebView = (url: string) => {
+    setCurrentUrl(url);
+    setCurrentScreen('webview');
   };
 
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+  // 打开缓存设置
+  const handleOpenCacheSettings = () => {
+    setCurrentScreen('cacheSettings');
+  };
+
+  // 返回首页
+  const handleGoBack = () => {
+    setCurrentUrl(null);
+    setCurrentScreen('home');
+  };
+
+  // 渲染当前页面
+  switch (currentScreen) {
+    case 'webview':
+      if (currentUrl) {
+        return <WebViewScreen url={currentUrl} onBack={handleGoBack} />;
+      }
+      return <HomeScreen onOpenWebView={handleOpenWebView} onOpenCacheSettings={handleOpenCacheSettings} />;
+
+    case 'cacheSettings':
+      return <CacheSettingsScreen onBack={handleGoBack} />;
+
+    default:
+      return <HomeScreen onOpenWebView={handleOpenWebView} onOpenCacheSettings={handleOpenCacheSettings} />;
+  }
 }
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
-
-export default App;
