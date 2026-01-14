@@ -4,22 +4,23 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   Alert,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebViewCache, CacheMode, cacheModeDescriptions, CacheModeType } from '../utils/webviewCache';
+import { useCacheMode } from '../contexts/CacheModeContext';
 
 interface CacheSettingsScreenProps {
   onBack: () => void;
 }
 
 export function CacheSettingsScreen({ onBack }: CacheSettingsScreenProps) {
+  const { cacheMode, setCacheMode } = useCacheMode();
   const [cacheSize, setCacheSize] = useState('计算中...');
   const [isClearing, setIsClearing] = useState(false);
-  const [selectedCacheMode, setSelectedCacheMode] = useState<CacheModeType>(CacheMode.LOAD_DEFAULT);
 
   // 获取缓存大小
   const fetchCacheSize = useCallback(async () => {
@@ -58,84 +59,90 @@ export function CacheSettingsScreen({ onBack }: CacheSettingsScreenProps) {
   }, [fetchCacheSize]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={styles.outerContainer}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
 
-      {/* 顶部栏 */}
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backIcon}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>缓存设置</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView style={styles.content}>
-        {/* 当前缓存状态 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>当前缓存</Text>
-          <View style={styles.cacheInfoCard}>
-            <View style={styles.cacheRow}>
-              <Text style={styles.cacheLabel}>已使用缓存</Text>
-              <Text style={styles.cacheValue}>{cacheSize}</Text>
-            </View>
-            <Pressable
-              style={[styles.clearButton, isClearing && styles.clearButtonDisabled]}
-              onPress={handleClearCache}
-              disabled={isClearing}>
-              {isClearing ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.clearButtonText}>清理缓存</Text>
-              )}
-            </Pressable>
-          </View>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+        {/* 顶部栏 */}
+        <View style={styles.header}>
+          <Pressable style={styles.backButton} onPress={onBack}>
+            <Text style={styles.backIcon}>‹</Text>
+          </Pressable>
+          <Text style={styles.title}>缓存设置</Text>
+          <View style={styles.placeholder} />
         </View>
 
-        {/* 缓存模式 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>缓存模式</Text>
-          <View style={styles.modeList}>
-            {Object.entries(cacheModeDescriptions).map(([key, value]) => (
+        <ScrollView style={styles.content}>
+          {/* 当前缓存状态 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>当前缓存</Text>
+            <View style={styles.cacheInfoCard}>
+              <View style={styles.cacheRow}>
+                <Text style={styles.cacheLabel}>已使用缓存</Text>
+                <Text style={styles.cacheValue}>{cacheSize}</Text>
+              </View>
               <Pressable
-                key={key}
-                style={[
-                  styles.modeItem,
-                  selectedCacheMode === Number(key) && styles.modeItemSelected,
-                ]}
-                onPress={() => setSelectedCacheMode(Number(key) as CacheModeType)}>
-                <View style={styles.modeContent}>
-                  <Text style={styles.modeLabel}>{value.label}</Text>
-                  <Text style={styles.modeDescription}>{value.description}</Text>
-                </View>
-                <View style={styles.radio}>
-                  {selectedCacheMode === Number(key) && <View style={styles.radioInner} />}
-                </View>
+                style={[styles.clearButton, isClearing && styles.clearButtonDisabled]}
+                onPress={handleClearCache}
+                disabled={isClearing}>
+                {isClearing ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.clearButtonText}>清理缓存</Text>
+                )}
               </Pressable>
-            ))}
+            </View>
           </View>
-        </View>
 
-        {/* 缓存说明 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>说明</Text>
-          <View style={styles.tipCard}>
-            <Text style={styles.tipText}>
-              • 静态资源（图片、CSS、JS）会被缓存以加速二次访问{'\n'}
-              • 清理缓存后会重新下载所有资源{'\n'}
-              • 离线模式下仍可访问已缓存的页面
-            </Text>
+          {/* 缓存模式 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>缓存模式</Text>
+            <View style={styles.modeList}>
+              {Object.entries(cacheModeDescriptions).map(([key, value]) => (
+                <Pressable
+                  key={key}
+                  style={[
+                    styles.modeItem,
+                    cacheMode === Number(key) && styles.modeItemSelected,
+                  ]}
+                  onPress={() => setCacheMode(Number(key) as CacheModeType)}>
+                  <View style={styles.modeContent}>
+                    <Text style={styles.modeLabel}>{value.label}</Text>
+                    <Text style={styles.modeDescription}>{value.description}</Text>
+                  </View>
+                  <View style={styles.radio}>
+                    {cacheMode === Number(key) && <View style={styles.radioInner} />}
+                  </View>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+
+          {/* 缓存说明 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>说明</Text>
+            <View style={styles.tipCard}>
+              <Text style={styles.tipText}>
+                • 静态资源（图片、CSS、JS）会被缓存以加速二次访问{'\n'}
+                • 清理缓存后会重新下载所有资源{'\n'}
+                • 离线模式下仍可访问已缓存的页面
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // 外层容器，背景色会延伸到非安全区域
+  outerContainer: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

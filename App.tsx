@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { WebViewScreen } from './src/screens/WebViewScreen';
 import { CacheSettingsScreen } from './src/screens/CacheSettingsScreen';
+import { CacheModeProvider } from './src/contexts/CacheModeContext';
 
 type Screen = 'home' | 'webview' | 'cacheSettings';
 
@@ -31,17 +32,21 @@ export default function App(): React.JSX.Element {
   };
 
   // 渲染当前页面
-  switch (currentScreen) {
-    case 'webview':
-      if (currentUrl) {
-        return <WebViewScreen url={currentUrl} onBack={handleGoBack} />;
-      }
-      return <HomeScreen onOpenWebView={handleOpenWebView} onOpenCacheSettings={handleOpenCacheSettings} />;
+  const screenContent = (() => {
+    switch (currentScreen) {
+      case 'webview':
+        if (currentUrl) {
+          return <WebViewScreen url={currentUrl} onBack={handleGoBack} />;
+        }
+        return <HomeScreen onOpenWebView={handleOpenWebView} onOpenCacheSettings={handleOpenCacheSettings} />;
 
-    case 'cacheSettings':
-      return <CacheSettingsScreen onBack={handleGoBack} />;
+      case 'cacheSettings':
+        return <CacheSettingsScreen onBack={handleGoBack} />;
 
-    default:
-      return <HomeScreen onOpenWebView={handleOpenWebView} onOpenCacheSettings={handleOpenCacheSettings} />;
-  }
+      default:
+        return <HomeScreen onOpenWebView={handleOpenWebView} onOpenCacheSettings={handleOpenCacheSettings} />;
+    }
+  })();
+
+  return <CacheModeProvider>{screenContent}</CacheModeProvider>;
 }

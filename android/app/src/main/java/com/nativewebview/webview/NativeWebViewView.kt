@@ -68,6 +68,10 @@ class NativeWebViewView(private val reactContext: ReactContext) : ViewGroup(reac
     // 当前图片压缩目标大小 (KB)
     private var currentMaxFileSizeKB = 2048
 
+    // 相机拍照压缩配置
+    private var cameraMaxWidth = 1920
+    private var cameraQuality = 85
+
     // Activity 结果监听器
     private val activityEventListener: ActivityEventListener = object : BaseActivityEventListener() {
         override fun onActivityResult(activity: Activity?, requestCode: Int, resultCode: Int, data: Intent?) {
@@ -334,6 +338,21 @@ class NativeWebViewView(private val reactContext: ReactContext) : ViewGroup(reac
     }
 
     /**
+     * 打开相机拍照（带参数）
+     */
+    fun openCameraWithOptions(optionsJson: String) {
+        try {
+            val json = org.json.JSONObject(optionsJson)
+            cameraMaxWidth = json.optInt("maxWidth", 1920)
+            cameraQuality = json.optInt("quality", 85)
+            android.util.Log.d("NativeWebView", "openCameraWithOptions: maxWidth=$cameraMaxWidth, quality=$cameraQuality")
+        } catch (e: Exception) {
+            android.util.Log.e("NativeWebView", "Failed to parse camera options", e)
+        }
+        openCamera()
+    }
+
+    /**
      * 打开相机拍照
      */
     fun openCamera() {
@@ -466,7 +485,11 @@ class NativeWebViewView(private val reactContext: ReactContext) : ViewGroup(reac
         if (mimeType.startsWith("image/")) {
             android.util.Log.d("NativeWebView", "getFileInfo: converting image to base64 with compression...")
             try {
-                base64Data = compressImageToBase64(uri, 1920, 85) // 最大宽度 1920，质量 85%
+                // 使用相机配置（针对拍照）或相册默认配置
+                val maxWidth = if (cameraPhotoUri != null && uri == cameraPhotoUri) cameraMaxWidth else 1920
+                val quality = if (cameraPhotoUri != null && uri == cameraPhotoUri) cameraQuality else 85
+                
+                base64Data = compressImageToBase64(uri, maxWidth, quality)
                 android.util.Log.d("NativeWebView", "getFileInfo: compressed base64Data length=${base64Data?.length ?: 0}")
             } catch (e: Exception) {
                 android.util.Log.e("NativeWebView", "Failed to compress image to base64", e)
@@ -678,6 +701,9 @@ class NativeWebViewView(private val reactContext: ReactContext) : ViewGroup(reac
             },
             onOpenGalleryWithOptions = { optionsJson ->
                 openGalleryWithOptions(optionsJson)
+            },
+            onOpenCameraWithOptions = { optionsJson ->
+                openCameraWithOptions(optionsJson)
             }
         )
         webView.addJavascriptInterface(jsBridge!!, WebViewJSBridge.BRIDGE_NAME)

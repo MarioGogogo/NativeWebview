@@ -5,157 +5,534 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JSBridge 通信测试</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* 主色调 - 活力渐变 */
+            --primary-from: #6366f1;
+            --primary-to: #a855f7;
+            --accent: #f43f5e;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --info: #0ea5e9;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+
+            /* 背景色 */
+            --bg-primary: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-secondary: #f1f5f9;
+
+            /* 文字颜色 */
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+
+            /* 边框 */
+            --border: #e2e8f0;
+
+            /* 阴影 */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
             min-height: 100vh;
-            padding: 20px;
+            padding: 16px;
+            color: var(--text-primary);
+            line-height: 1.5;
         }
-        .card {
-            background: white;
+
+        /* 顶部装饰条 - Aurora 渐变效果 */
+        .hero-bar {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 25%, #a855f7 50%, #d946ef 75%, #ec4899 100%);
+            background-size: 200% 200%;
+            animation: gradient-shift 8s ease infinite;
             border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 32px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-lg);
         }
-        h1 { color: #333; font-size: 22px; margin-bottom: 16px; text-align: center; }
-        h2 { color: #666; font-size: 16px; margin-bottom: 12px; }
-        h3 { color: #555; font-size: 14px; margin: 12px 0 8px; }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero-title {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero-subtitle {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .card-icon.purple {
+            background: linear-gradient(135deg, #8b5cf6, #a855f7);
+        }
+
+        .card-icon.pink {
+            background: linear-gradient(135deg, #ec4899, #f43f5e);
+        }
+
+        .card-icon.green {
+            background: linear-gradient(135deg, #22c55e, #10b981);
+        }
+
+        .card-icon.blue {
+            background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+        }
+
+        .card-icon.orange {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+        }
+
+        h2 {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* 设备信息 */
+        .device-info {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 13px;
+        }
+
+        .device-info div {
+            margin: 6px 0;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .device-info strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* 按钮样式 */
         .btn {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             width: 100%;
-            padding: 14px;
+            padding: 14px 20px;
             margin: 8px 0;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 15px;
             font-weight: 600;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             cursor: pointer;
-            transition: transform 0.1s, opacity 0.1s;
+            transition: all 0.2s ease;
         }
-        .btn:active { transform: scale(0.98); opacity: 0.9; }
-        .btn-primary { background: #667eea; color: white; }
-        .btn-success { background: #10b981; color: white; }
-        .btn-warning { background: #f59e0b; color: white; }
-        .btn-file { background: #8b5cf6; color: white; }
-        .btn-camera { background: #ec4899; color: white; }
-        .btn-danger { background: #ef4444; color: white; }
-        .log-area {
-            background: #1e1e1e;
-            border-radius: 10px;
-            padding: 16px;
-            height: 150px;
-            overflow-y: auto;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 12px;
-            color: #0f0;
-        }
-        .log-item { margin: 4px 0; line-height: 1.4; }
-        .log-item.sent { color: #60a5fa; }
-        .log-item.received { color: #34d399; }
-        .log-item.info { color: #fbbf24; }
-        .device-info { background: #f3f4f6; padding: 12px; border-radius: 8px; font-size: 13px; color: #666; }
-        .device-info div { margin: 4px 0; }
 
-        /* 媒体预览区域 */
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-from), var(--primary-to));
+            color: white;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            color: white;
+            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+            color: white;
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-purple {
+            background: linear-gradient(135deg, #8b5cf6, #a855f7);
+            color: white;
+            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-pink {
+            background: linear-gradient(135deg, #ec4899, #f43f5e);
+            color: white;
+            box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        /* 日志区域 */
+        .log-area {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 16px;
+            height: 180px;
+            overflow-y: auto;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            border: 1px solid #334155;
+        }
+
+        .log-item {
+            margin: 5px 0;
+            line-height: 1.5;
+            padding: 4px 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-item.sent {
+            color: #60a5fa;
+        }
+
+        .log-item.received {
+            color: #4ade80;
+        }
+
+        .log-item.info {
+            color: #fbbf24;
+        }
+
+        /* 媒体网格 */
         .media-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 8px;
+            gap: 10px;
             margin-top: 12px;
         }
+
         .media-item {
             position: relative;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            background: #f3f4f6;
+            background: var(--bg-secondary);
+            aspect-ratio: 1;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .media-item img, .media-item video {
+
+        .media-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .media-item img,
+        .media-item video {
             width: 100%;
-            height: 100px;
+            height: 100%;
             object-fit: cover;
         }
+
         .media-item .remove-btn {
             position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 24px;
-            height: 24px;
-            background: rgba(0,0,0,0.6);
+            top: 6px;
+            right: 6px;
+            width: 26px;
+            height: 26px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
             color: white;
             border: none;
             border-radius: 50%;
-            font-size: 14px;
+            font-size: 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: background 0.2s ease;
         }
+
+        .media-item .remove-btn:hover {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
         .media-item .video-icon {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
         }
+
         .media-info {
-            font-size: 11px;
-            color: #666;
-            padding: 4px;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(15, 23, 42, 0.8));
+            padding: 20px 8px 6px;
+            font-size: 10px;
+            color: white;
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
         .empty-tip {
             text-align: center;
-            color: #999;
-            font-size: 13px;
-            padding: 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+            padding: 32px 20px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 2px dashed var(--border);
+        }
+
+        /* 按钮组 */
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-group .btn {
+            margin: 0;
+        }
+
+        /* 统计信息 */
+        .stats-info {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .stat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .stat-badge.purple {
+            background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
+            color: #7c3aed;
+        }
+
+        .stat-badge.pink {
+            background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+            color: #db2777;
+        }
+
+        .stat-badge.blue {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            color: #2563eb;
+        }
+
+        /* 滚动条美化 */
+        .log-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .log-area::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+
+        .log-area::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        .log-area::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .hero-title {
+                font-size: 22px;
+            }
+
+            .media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+                gap: 8px;
+            }
+
+            .btn-group {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- 顶部 Hero 区域 -->
+    <div class="hero-bar">
+        <div class="hero-title">⚡ JSBridge Demo</div>
+        <div class="hero-subtitle">WebView 原生通信测试</div>
+    </div>
+
+    <!-- 设备信息 -->
     <div class="card">
-        <h1>🔗 JSBridge 通信测试</h1>
+        <div class="card-header">
+            <div class="card-icon purple">📱</div>
+            <h2>设备信息</h2>
+        </div>
         <div class="device-info" id="deviceInfo">正在获取设备信息...</div>
     </div>
 
+    <!-- 相机与相册 -->
     <div class="card">
-        <h2>📷 相机与相册</h2>
-        <button class="btn btn-camera" onclick="NativeBridge.openCamera()">📸 拍照</button>
-        <button class="btn btn-primary" onclick="openPhotoWithOptions()">🖼️ 选择图片 (自定义)</button>
-        <button class="btn btn-file" onclick="NativeBridge.openGallerySingle()">🖼️ 相册单选</button>
-        <button class="btn btn-success" onclick="NativeBridge.openGalleryMulti()">📁 相册多选</button>
-    </div>
-
-    <div class="card">
-        <h2>📤 发送消息到 RN</h2>
-        <button class="btn btn-primary" onclick="sendSimpleMessage()">发送简单消息</button>
-        <button class="btn btn-warning" onclick="sendActionMessage()">发送 Action 请求</button>
-    </div>
-
-    <div class="card">
-        <h2>🎬 已选择的媒体</h2>
-        <div id="mediaContainer">
-            <div class="empty-tip">暂无选择的媒体</div>
+        <div class="card-header">
+            <div class="card-icon pink">📷</div>
+            <h2>相机与相册</h2>
         </div>
-        <div id="mediaInfo" style="font-size: 12px; color: #666; margin-top: 8px;"></div>
+        <div class="btn-group">
+            <button class="btn btn-warning" onclick="openCameraWithOptions()">
+                📸 拍照
+            </button>
+            <button class="btn btn-primary" onclick="openPhotoWithOptions()">
+                🖼️ 选图片
+            </button>
+        </div>
     </div>
 
+    <!-- 消息测试 -->
     <div class="card">
-        <h2>📋 通信日志</h2>
+        <div class="card-header">
+            <div class="card-icon green">📤</div>
+            <h2>发送消息</h2>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="sendSimpleMessage()">
+                💬 简单消息
+            </button>
+            <button class="btn btn-purple" onclick="sendActionMessage()">
+                ⚡ Action 请求
+            </button>
+        </div>
+    </div>
+
+    <!-- 媒体预览 -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon blue">🎬</div>
+            <h2>已选择的媒体</h2>
+        </div>
+        <div id="mediaContainer">
+            <div class="empty-tip">暂无选择的媒体文件</div>
+        </div>
+        <div id="mediaInfo">
+            <div class="stats-info" id="statsInfo" style="display: none;">
+                <span class="stat-badge purple" id="imageStat">📷 0 图片</span>
+                <span class="stat-badge pink" id="videoStat">🎥 0 视频</span>
+                <span class="stat-badge blue" id="sizeStat">📦 0 B</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通信日志 -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon orange">📋</div>
+            <h2>通信日志</h2>
+        </div>
         <div class="log-area" id="logArea"></div>
-        <button class="btn btn-primary" onclick="clearLogs()" style="margin-top: 12px;">清空日志</button>
-        <button class="btn btn-danger" onclick="clearMedia()" style="margin-top: 8px;">清除媒体</button>
+        <div class="btn-group" style="margin-top: 12px;">
+            <button class="btn btn-secondary" onclick="clearLogs()">清空日志</button>
+            <button class="btn btn-danger" onclick="clearMedia()">清除媒体</button>
+        </div>
     </div>
 
     <script>
         const logArea = document.getElementById('logArea');
         const deviceInfoEl = document.getElementById('deviceInfo');
         const mediaContainer = document.getElementById('mediaContainer');
-        const mediaInfoEl = document.getElementById('mediaInfo');
+        const statsInfo = document.getElementById('statsInfo');
+        const imageStat = document.getElementById('imageStat');
+        const videoStat = document.getElementById('videoStat');
+        const sizeStat = document.getElementById('sizeStat');
 
         // 已选择的媒体文件
         let selectedMedia = [];
@@ -182,10 +559,10 @@
                     const info = JSON.parse(window.NativeBridge.getDeviceInfo());
                     const timestamp = window.NativeBridge.getTimestamp();
                     deviceInfoEl.innerHTML = `
-                        <div><strong>平台:</strong> ${info.platform}</div>
-                        <div><strong>系统版本:</strong> Android ${info.version}</div>
-                        <div><strong>设备型号:</strong> ${info.brand} ${info.model}</div>
-                        <div><strong>时间戳:</strong> ${timestamp}</div>
+                        <div><strong>平台</strong> <span>${info.platform}</span></div>
+                        <div><strong>系统版本</strong> <span>Android ${info.version}</span></div>
+                        <div><strong>设备型号</strong> <span>${info.brand} ${info.model}</span></div>
+                        <div><strong>时间戳</strong> <span>${timestamp}</span></div>
                     `;
                     log('✅ JSBridge 已连接', 'info');
                     log('✅ 可调用 NativeBridge.openCamera()', 'info');
@@ -232,12 +609,26 @@
          */
         function openPhotoWithOptions() {
             const options = {
-                maxCount: 1,      // 只能选 1 张
-                maxSizeKB: 2048,  // 最大 2MB
-                photosOnly: true  // 仅显示图片
+                maxCount: 1,
+                maxSizeKB: 2048,
+                photosOnly: true
             };
             log(`📷 调用 openGalleryWithOptions: ${JSON.stringify(options)}`, 'sent');
             NativeBridge.openGalleryWithOptions(JSON.stringify(options));
+        }
+
+        /**
+         * 打开相机（自定义配置）
+         * maxWidth: 最大宽度
+         * quality: 压缩质量 0-100
+         */
+        function openCameraWithOptions() {
+            const options = {
+                maxWidth: 1024,
+                quality: 60
+            };
+            log(`📸 调用 openCameraWithOptions: ${JSON.stringify(options)}`, 'sent');
+            NativeBridge.openCameraWithOptions(JSON.stringify(options));
         }
 
         // 接收来自 RN 的消息 (方式1: 函数回调)
@@ -260,14 +651,12 @@
         function handleNativeMessage(data) {
             log(`📦 消息类型: ${data.type}`, 'info');
             log(`📦 消息数据: ${JSON.stringify(data.data).substring(0, 200)}...`, 'info');
-            
+
             if (data.type === 'file_selected') {
-                // 单个文件选择
                 log(`📷 文件 URI 类型: ${data.data.uri ? data.data.uri.substring(0, 50) : 'undefined'}`, 'info');
                 addMediaItem(data.data);
                 log(`📷 选择文件: ${data.data.name}`, 'info');
             } else if (data.type === 'files_selected') {
-                // 多个文件选择
                 log(`📷 多选文件数: ${data.data.length}`, 'info');
                 data.data.forEach((item, index) => {
                     log(`📷 文件[${index}] URI 类型: ${item.uri ? item.uri.substring(0, 50) : 'undefined'}`, 'info');
@@ -301,7 +690,7 @@
             if (isVideo) {
                 div.innerHTML = `
                     <video src="${fileData.uri}" playsinline muted></video>
-                    <div class="video-icon">▶️</div>
+                    <div class="video-icon">▶</div>
                     <button class="remove-btn" onclick="removeMedia('${mediaId}')">×</button>
                     <div class="media-info">${fileData.name}</div>
                 `;
@@ -339,7 +728,7 @@
 
                 // 如果没有媒体了，显示提示
                 if (selectedMedia.length === 0) {
-                    mediaContainer.innerHTML = '<div class="empty-tip">暂无选择的媒体</div>';
+                    mediaContainer.innerHTML = '<div class="empty-tip">暂无选择的媒体文件</div>';
                 }
                 updateMediaInfo();
             }
@@ -348,20 +737,24 @@
         // 清除所有媒体
         function clearMedia() {
             selectedMedia = [];
-            mediaContainer.innerHTML = '<div class="empty-tip">暂无选择的媒体</div>';
-            mediaInfoEl.textContent = '';
+            mediaContainer.innerHTML = '<div class="empty-tip">暂无选择的媒体文件</div>';
+            statsInfo.style.display = 'none';
             log('🗑️ 已清除所有媒体', 'info');
         }
 
         // 更新媒体信息
         function updateMediaInfo() {
             if (selectedMedia.length > 0) {
+                statsInfo.style.display = 'flex';
                 const totalSize = selectedMedia.reduce((sum, m) => sum + (m.size || 0), 0);
                 const imageCount = selectedMedia.filter(m => m.type.startsWith('image/')).length;
                 const videoCount = selectedMedia.filter(m => m.type.startsWith('video/')).length;
-                mediaInfoEl.textContent = `共 ${selectedMedia.length} 个文件 (图片: ${imageCount}, 视频: ${videoCount}) - ${formatFileSize(totalSize)}`;
+
+                imageStat.textContent = `📷 ${imageCount} 图片`;
+                videoStat.textContent = `🎥 ${videoCount} 视频`;
+                sizeStat.textContent = `📦 ${formatFileSize(totalSize)}`;
             } else {
-                mediaInfoEl.textContent = '';
+                statsInfo.style.display = 'none';
             }
         }
 
@@ -369,8 +762,8 @@
         function formatFileSize(bytes) {
             if (!bytes) return '0 B';
             if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
         // 页面加载完成后初始化

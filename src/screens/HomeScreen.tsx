@@ -4,9 +4,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
  * HomeScreen - 应用首页
@@ -28,56 +29,64 @@ export function HomeScreen({ onOpenWebView, onOpenCacheSettings }: HomeScreenPro
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.content}>
-        <Text style={styles.title}>Native WebView Demo</Text>
-        <Text style={styles.subtitle}>点击下方链接打开 WebView</Text>
+    <View style={styles.outerContainer}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+          <Text style={styles.title}>Native WebView Demo</Text>
+          <Text style={styles.subtitle}>点击下方链接打开 WebView</Text>
 
-        <View style={styles.buttonList}>
-          {demoUrls.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.button}
-              onPress={() => onOpenWebView(item.url)}
-              activeOpacity={0.7}>
-              <Text style={styles.buttonText}>{item.name}</Text>
-              <Text style={styles.buttonUrl} numberOfLines={1}>
-                {item.url}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          <View style={styles.buttonList}>
+            {demoUrls.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.button}
+                onPress={() => onOpenWebView(item.url)}
+                activeOpacity={0.7}>
+                <Text style={styles.buttonText}>{item.name}</Text>
+                <Text style={styles.buttonUrl} numberOfLines={1}>
+                  {item.url}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        {/* 缓存设置入口 */}
-        <TouchableOpacity
-          style={styles.cacheButton}
-          onPress={onOpenCacheSettings}
-          activeOpacity={0.7}>
-          <Text style={styles.cacheButtonText}>⚙️ 缓存设置</Text>
-        </TouchableOpacity>
+          {/* 缓存设置入口 */}
+          <TouchableOpacity
+            style={styles.cacheButton}
+            onPress={onOpenCacheSettings}
+            activeOpacity={0.7}>
+            <Text style={styles.cacheButtonText}>⚙️ 缓存设置</Text>
+          </TouchableOpacity>
 
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>功能特性</Text>
-          <Text style={styles.infoText}>✓ 原生 Android WebView (自研)</Text>
-          <Text style={styles.infoText}>✓ 加载进度实时监听</Text>
-          <Text style={styles.infoText}>✓ 缓存策略控制 (4种模式)</Text>
-          <Text style={styles.infoText}>✓ JSBridge 双向通信</Text>
-          <Text style={styles.infoText}>✓ 注入 JavaScript</Text>
-          <Text style={styles.infoText}>✓ 前进/后退/刷新导航</Text>
-        </View>
-      </View>
-    </SafeAreaView>
+          <View style={styles.infoSection}>
+            <Text style={styles.infoTitle}>功能特性</Text>
+            <Text style={styles.infoText}>✓ 原生 Android WebView (自研)</Text>
+            <Text style={styles.infoText}>✓ 加载进度实时监听</Text>
+            <Text style={styles.infoText}>✓ 缓存策略控制 (4种模式)</Text>
+            <Text style={styles.infoText}>✓ JSBridge 双向通信</Text>
+            <Text style={styles.infoText}>✓ 注入 JavaScript</Text>
+            <Text style={styles.infoText}>✓ 前进/后退/刷新导航</Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // 外层容器，背景色会延伸到非安全区域
+  outerContainer: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  content: {
+  safeArea: {
     flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
     padding: 20,
   },
   title: {
@@ -99,11 +108,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
   },
   buttonText: {
     fontSize: 18,

@@ -23,7 +23,8 @@ class WebViewJSBridge(
     private val onOpenCamera: (() -> Unit)? = null,
     private val onOpenGallerySingle: (() -> Unit)? = null,
     private val onOpenGalleryMulti: (() -> Unit)? = null,
-    private val onOpenGalleryWithOptions: ((String) -> Unit)? = null
+    private val onOpenGalleryWithOptions: ((String) -> Unit)? = null,
+    private val onOpenCameraWithOptions: ((String) -> Unit)? = null
 ) {
     companion object {
         const val BRIDGE_NAME = "NativeBridge"
@@ -48,6 +49,18 @@ class WebViewJSBridge(
     fun openCamera() {
         mainHandler.post {
             onOpenCamera?.invoke()
+        }
+    }
+
+    /**
+     * H5 → Native: 打开相机拍照（带参数）
+     * @param optionsJson JSON 格式的配置: {"maxWidth": 1024, "quality": 80}
+     */
+    @JavascriptInterface
+    fun openCameraWithOptions(optionsJson: String) {
+        android.util.Log.d("WebViewJSBridge", "openCameraWithOptions: $optionsJson")
+        mainHandler.post {
+            onOpenCameraWithOptions?.invoke(optionsJson)
         }
     }
 

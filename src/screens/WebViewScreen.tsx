@@ -4,13 +4,14 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  SafeAreaView,
   StatusBar,
   Animated,
   ScrollView,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import NativeWebView, { NativeWebViewRef } from '../components/NativeWebView';
+import { useCacheMode } from '../contexts/CacheModeContext';
 
 interface WebViewScreenProps {
   url: string;
@@ -31,6 +32,7 @@ interface MessageItem {
 
 export function WebViewScreen({ url, onBack, showNavigationBar = true, customTitle }: WebViewScreenProps) {
   const webViewRef = useRef<NativeWebViewRef>(null);
+  const { cacheMode } = useCacheMode();
   const [progress, setProgress] = useState(0);
   const [title, setTitle] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -98,8 +100,10 @@ export function WebViewScreen({ url, onBack, showNavigationBar = true, customTit
   const showMessagePanel = url.includes('android_asset');
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={styles.outerContainer}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
 
       {/* 导航栏 */}
       {showNavigationBar && (
@@ -142,6 +146,7 @@ export function WebViewScreen({ url, onBack, showNavigationBar = true, customTit
           source={{ uri: url }}
           javaScriptEnabled={true}
           domStorageEnabled={true}
+          cacheMode={cacheMode}
           style={styles.webView}
           onProgress={handleProgressChange}
           onLoadEnd={handleLoadEnd}
@@ -193,14 +198,19 @@ export function WebViewScreen({ url, onBack, showNavigationBar = true, customTit
           </View>
         </View>
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // 外层容器，背景色会延伸到非安全区域
+  outerContainer: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  safeArea: {
+    flex: 1,
   },
   navigationBar: {
     flexDirection: 'row',
@@ -210,11 +220,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#e0e0e0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
   },
   backButton: {
     width: 44,
@@ -265,7 +270,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#e0e0e0',
-    elevation: 10,
     maxHeight: 300,
   },
   messageHeader: {
