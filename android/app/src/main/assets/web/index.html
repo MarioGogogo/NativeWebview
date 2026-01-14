@@ -125,6 +125,7 @@
     <div class="card">
         <h2>📷 相机与相册</h2>
         <button class="btn btn-camera" onclick="NativeBridge.openCamera()">📸 拍照</button>
+        <button class="btn btn-primary" onclick="openPhotoWithOptions()">🖼️ 选择图片 (自定义)</button>
         <button class="btn btn-file" onclick="NativeBridge.openGallerySingle()">🖼️ 相册单选</button>
         <button class="btn btn-success" onclick="NativeBridge.openGalleryMulti()">📁 相册多选</button>
     </div>
@@ -223,6 +224,22 @@
             });
         }
 
+        /**
+         * 打开相册（自定义配置）
+         * maxCount: 最大选择数量
+         * maxSizeKB: 最大文件大小 (KB)
+         * photosOnly: 是否仅显示图片
+         */
+        function openPhotoWithOptions() {
+            const options = {
+                maxCount: 1,      // 只能选 1 张
+                maxSizeKB: 2048,  // 最大 2MB
+                photosOnly: true  // 仅显示图片
+            };
+            log(`📷 调用 openGalleryWithOptions: ${JSON.stringify(options)}`, 'sent');
+            NativeBridge.openGalleryWithOptions(JSON.stringify(options));
+        }
+
         // 接收来自 RN 的消息 (方式1: 函数回调)
         window.onNativeMessage = function(data) {
             log(`📥 收到: ${data}`, 'received');
@@ -241,13 +258,19 @@
 
         // 处理来自 Native 的消息
         function handleNativeMessage(data) {
+            log(`📦 消息类型: ${data.type}`, 'info');
+            log(`📦 消息数据: ${JSON.stringify(data.data).substring(0, 200)}...`, 'info');
+            
             if (data.type === 'file_selected') {
                 // 单个文件选择
+                log(`📷 文件 URI 类型: ${data.data.uri ? data.data.uri.substring(0, 50) : 'undefined'}`, 'info');
                 addMediaItem(data.data);
                 log(`📷 选择文件: ${data.data.name}`, 'info');
             } else if (data.type === 'files_selected') {
                 // 多个文件选择
-                data.data.forEach(item => {
+                log(`📷 多选文件数: ${data.data.length}`, 'info');
+                data.data.forEach((item, index) => {
+                    log(`📷 文件[${index}] URI 类型: ${item.uri ? item.uri.substring(0, 50) : 'undefined'}`, 'info');
                     addMediaItem(item);
                 });
                 log(`📷 选择 ${data.data.length} 个文件`, 'info');

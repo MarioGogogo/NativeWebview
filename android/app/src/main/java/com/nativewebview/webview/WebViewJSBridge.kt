@@ -22,7 +22,8 @@ class WebViewJSBridge(
     private val onMessage: (String) -> Unit,
     private val onOpenCamera: (() -> Unit)? = null,
     private val onOpenGallerySingle: (() -> Unit)? = null,
-    private val onOpenGalleryMulti: (() -> Unit)? = null
+    private val onOpenGalleryMulti: (() -> Unit)? = null,
+    private val onOpenGalleryWithOptions: ((String) -> Unit)? = null
 ) {
     companion object {
         const val BRIDGE_NAME = "NativeBridge"
@@ -67,6 +68,18 @@ class WebViewJSBridge(
     fun openGalleryMulti() {
         mainHandler.post {
             onOpenGalleryMulti?.invoke()
+        }
+    }
+
+    /**
+     * H5 → Native: 打开相册（可配置参数）
+     * @param optionsJson JSON 格式的配置: {"maxCount": 1, "maxSizeKB": 2048, "photosOnly": true}
+     */
+    @JavascriptInterface
+    fun openGalleryWithOptions(optionsJson: String) {
+        android.util.Log.d("WebViewJSBridge", "openGalleryWithOptions: $optionsJson")
+        mainHandler.post {
+            onOpenGalleryWithOptions?.invoke(optionsJson)
         }
     }
 
